@@ -41,15 +41,11 @@ public class InternshipPhaseServiceImpl implements IInternshipPhaseService {
 
     @Override
     public ApiResponse<InternshipPhaseResponse> getPhaseDetail(Long phaseId) {
-        // 1. Tìm thông tin giai đoạn thực tập
         InternshipPhase phase = phaseRepository.findById(phaseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giai đoạn thực tập ID: " + phaseId));
 
-        // 2. Map sang Response chính
         InternshipPhaseResponse response = modelMapper.map(phase, InternshipPhaseResponse.class);
 
-        // 3. Lấy danh sách các vòng đánh giá thuộc Phase này (Sử dụng Repository của AssessmentRound)
-        // Giả sử bạn đã tạo IAssessmentRoundRepository
         List<AssessmentRound> rounds = roundRepository.findByInternshipPhase_PhaseId(phaseId);
 
         List<AssessmentRoundResponse> roundDtos = rounds.stream()
@@ -63,7 +59,6 @@ public class InternshipPhaseServiceImpl implements IInternshipPhaseService {
 
     @Override
     public ApiResponse<InternshipPhaseResponse> createPhase(CreateInternshipPhaseRequest dto) {
-        // 1. Kiểm tra logic ngày tháng
         if (dto.getStartDate().isAfter(dto.getEndDate())) {
             throw new RuntimeException("Ngày bắt đầu phải trước ngày kết thúc!");
         }

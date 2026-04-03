@@ -26,7 +26,6 @@ public class RoundCriteriaServiceImpl implements IRoundCriteriaService {
     private final IEvaluationCriteriaRepository criteriaRepository;
     private final ModelMapper modelMapper;
 
-    // 1. Lấy danh sách (Lọc theo round_id nếu có)
     @Override
     public ApiResponse<List<RoundCriteriaResponse>> getAll(Long roundId) {
         List<RoundCriteria> list;
@@ -42,7 +41,6 @@ public class RoundCriteriaServiceImpl implements IRoundCriteriaService {
         return ApiResponse.success(responses, "Thành công");
     }
 
-    // 2. Lấy chi tiết theo ID bảng trung gian
     @Override
     public ApiResponse<RoundCriteriaResponse> getById(Long id) {
         RoundCriteria rc = roundCriteriaRepository.findById(id)
@@ -50,7 +48,6 @@ public class RoundCriteriaServiceImpl implements IRoundCriteriaService {
         return ApiResponse.success(convertToResponse(rc), "Thành công");
     }
 
-    // 3. Thêm mới
     @Override
     @Transactional
     public ApiResponse<RoundCriteriaResponse> create(RoundCriterionRequest dto) {
@@ -73,14 +70,12 @@ public class RoundCriteriaServiceImpl implements IRoundCriteriaService {
         return ApiResponse.success(convertToResponse(roundCriteriaRepository.save(rc)), "Thêm mới thành công");
     }
 
-    // 4. Cập nhật (PUT)
     @Override
     @Transactional
     public ApiResponse<RoundCriteriaResponse> update(Long id, RoundCriterionRequest dto) {
         RoundCriteria rc = roundCriteriaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy bản ghi ID: " + id));
 
-        // Cập nhật trọng số
         rc.setWeight(dto.getWeight());
 
         // Lưu ý: Thường không nên cho phép đổi roundId/criterionId ở đây
@@ -89,7 +84,6 @@ public class RoundCriteriaServiceImpl implements IRoundCriteriaService {
         return ApiResponse.success(convertToResponse(roundCriteriaRepository.save(rc)), "Cập nhật trọng số thành công");
     }
 
-    // 5. Xóa
     @Override
     @Transactional
     public ApiResponse<Void> delete(Long id) {
