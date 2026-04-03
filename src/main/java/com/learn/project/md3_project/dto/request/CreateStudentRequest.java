@@ -12,6 +12,7 @@ import java.time.LocalDate;
 @Getter
 @Setter
 public class CreateStudentRequest {
+    private String username;
     @NotBlank(message = "Email không được để trống")
     @Email(message = "Định dạng email không hợp lệ")
     private String email;

@@ -8,6 +8,7 @@ import com.learn.project.md3_project.entity.InternshipAssignment;
 import com.learn.project.md3_project.entity.InternshipPhase;
 import com.learn.project.md3_project.entity.Mentor;
 import com.learn.project.md3_project.entity.Student;
+import com.learn.project.md3_project.exception.AccessDeniedException;
 import com.learn.project.md3_project.exception.ResourceNotFoundException;
 import com.learn.project.md3_project.repository.IInternshipAssignmentRepository;
 import com.learn.project.md3_project.repository.IInternshipPhaseRepository;
@@ -37,9 +38,32 @@ public class InternshipAssignmentServiceImpl implements IInternshipAssignmentSer
     private final ModelMapper modelMapper;
 
 
+    private UserDetailCustom getCurrentUser() {
+        return (UserDetailCustom) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    }
+
+    private AssignmentResponse convertToResponse(InternshipAssignment assignment) {
+        AssignmentResponse response = modelMapper.map(assignment, AssignmentResponse.class);
+
+        if (assignment.getStudent() != null && assignment.getStudent().getUser() != null) {
+            response.setStudentName(assignment.getStudent().getUser().getFullName());
+            response.setStudentCode(assignment.getStudent().getStudentCode());
+        }
+        if (assignment.getMentor() != null && assignment.getMentor().getUser() != null) {
+            response.setMentorName(assignment.getMentor().getUser().getFullName());
+        }
+        if (assignment.getInternshipPhase() != null) {
+            response.setPhaseName(assignment.getInternshipPhase().getPhaseName());
+        }
+
+        response.setStatus(assignment.getStatus().name());
+        return response;
+    }
+
+
     @Override
     @Transactional
-    public ApiResponse<AssignmentResponse> createAssignment(AssignmentRequest dto) throws  ResourceNotFoundException {
+    public ApiResponse<AssignmentResponse> createAssignment(AssignmentRequest dto) {
         Student student = studentRepository.findById(dto.getStudentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sinh viên"));
         Mentor mentor = mentorRepository.findById(dto.getMentorId())
@@ -58,60 +82,31 @@ public class InternshipAssignmentServiceImpl implements IInternshipAssignmentSer
                 .status(InternshipAssignment.AssignmentStatus.PENDING)
                 .build();
 
-        InternshipAssignment saved = assignmentRepository.save(assignment);
-
-        AssignmentResponse response = modelMapper.map(saved, AssignmentResponse.class);
-        response.setStudentName(student.getUser().getFullName());
-        response.setStudentCode(student.getStudentCode());
-        response.setMentorName(mentor.getUser().getFullName());
-        response.setPhaseName(phase.getPhaseName());
-        response.setStatus(saved.getStatus().name());
-
-        return ApiResponse.success(response, "Phân công thực tập thành công");
+        return ApiResponse.success(convertToResponse(assignmentRepository.save(assignment)), "Phân công thực tập thành công");
     }
 
     @Override
     public ApiResponse<List<AssignmentResponse>> getAssignmentsByRole() {
-        // 1. Lấy thông tin User đang đăng nhập từ SecurityContext
-        UserDetailCustom currentUser = (UserDetailCustom) SecurityContextHolder.getContext()
-                .getAuthentication().getPrincipal();
+        UserDetailCustom currentUser = getCurrentUser();
+        Long userId = currentUser.getUserId();
 
-        Long currentUserId = currentUser.getUserId();
-
-        // Kiểm tra các quyền của User
-        boolean isAdmin = currentUser.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        boolean isMentor = currentUser.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_MENTOR"));
-        boolean isStudent = currentUser.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_STUDENT"));
+        boolean isAdmin = currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isMentor = currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MENTOR"));
+        boolean isStudent = currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_STUDENT"));
 
         List<InternshipAssignment> assignments;
-
-        // 2. Phân luồng lấy dữ liệu dựa trên Role
         if (isAdmin) {
             assignments = assignmentRepository.findAll();
         } else if (isMentor) {
-            assignments = assignmentRepository.findByMentor_MentorId(currentUserId);
+            assignments = assignmentRepository.findByMentor_MentorId(userId);
         } else if (isStudent) {
-            assignments = assignmentRepository.findByStudent_StudentId(currentUserId);
+            assignments = assignmentRepository.findByStudent_StudentId(userId);
         } else {
-            return ApiResponse.success(new ArrayList<>(), "Không có quyền truy cập dữ liệu");
+            throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu này");
         }
 
         List<AssignmentResponse> responses = assignments.stream()
-                .map(item -> {
-                    AssignmentResponse dto = modelMapper.map(item, AssignmentResponse.class);
-
-                    // Gán thủ công các trường lồng nhau (Nested Objects)
-                    dto.setStudentName(item.getStudent().getUser().getFullName());
-                    dto.setStudentCode(item.getStudent().getStudentCode());
-                    dto.setMentorName(item.getMentor().getUser().getFullName());
-                    dto.setPhaseName(item.getInternshipPhase().getPhaseName());
-                    dto.setStatus(item.getStatus().name());
-
-                    return dto;
-                })
+                .map(this::convertToResponse)
                 .collect(Collectors.toList());
 
         return ApiResponse.success(responses, "Lấy danh sách phân công thành công");
@@ -119,75 +114,55 @@ public class InternshipAssignmentServiceImpl implements IInternshipAssignmentSer
 
     @Override
     public ApiResponse<AssignmentResponse> getAssignmentDetail(Long assignmentId) {
-        UserDetailCustom currentUser = (UserDetailCustom) SecurityContextHolder.getContext()
-                .getAuthentication().getPrincipal();
-
-        Long currentUserId = currentUser.getUserId();
-        boolean isAdmin = currentUser.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
+        UserDetailCustom currentUser = getCurrentUser();
         InternshipAssignment assign = assignmentRepository.findById(assignmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phân công với ID: " + assignmentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phân công ID: " + assignmentId));
+
+        boolean isAdmin = currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
         if (!isAdmin) {
-            boolean isMentorOfThis = assign.getMentor().getMentorId().equals(currentUserId);
-            boolean isStudentOfThis = assign.getStudent().getStudentId().equals(currentUserId);
-
-            if (!isMentorOfThis && !isStudentOfThis) {
-                throw new RuntimeException("Bạn không có quyền xem chi tiết phân công này!");
-            }
+            boolean isOwner = assign.getMentor().getMentorId().equals(currentUser.getUserId()) ||
+                    assign.getStudent().getStudentId().equals(currentUser.getUserId());
+            if (!isOwner) throw new AccessDeniedException("Bạn không có quyền xem chi tiết phân công này!");
         }
 
-        AssignmentResponse response = modelMapper.map(assign, AssignmentResponse.class);
-
-        // Gán thủ công các trường thông tin từ User liên quan
-        response.setStudentName(assign.getStudent().getUser().getFullName());
-        response.setStudentCode(assign.getStudent().getStudentCode());
-        response.setMentorName(assign.getMentor().getUser().getFullName());
-        response.setPhaseName(assign.getInternshipPhase().getPhaseName());
-        response.setStatus(assign.getStatus().name());
-
-        return ApiResponse.success(response, "Lấy chi tiết phân công thành công");
+        return ApiResponse.success(convertToResponse(assign), "Lấy chi tiết phân công thành công");
     }
 
     @Override
+    @Transactional
     public ApiResponse<AssignmentResponse> updateAssignmentStatus(Long assignmentId, AsignStatusUpdateRequest dto) {
-        // 1. Lấy thông tin User đang đăng nhập
-        UserDetailCustom currentUser = (UserDetailCustom) SecurityContextHolder.getContext()
-                .getAuthentication().getPrincipal();
-
-        Long currentUserId = currentUser.getUserId();
-        boolean isAdmin = currentUser.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
-        // 2. Tìm bản phân công
+        UserDetailCustom currentUser = getCurrentUser();
         InternshipAssignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phân công ID: " + assignmentId));
 
-        // 3. KIỂM TRA QUYỀN: Nếu là Mentor, chỉ được sửa sinh viên mình hướng dẫn
-        if (!isAdmin) {
-            boolean isMentorOfThis = assignment.getMentor().getMentorId().equals(currentUserId);
-            if (!isMentorOfThis) {
-                throw new RuntimeException("Bạn không có quyền cập nhật trạng thái cho phân công này!");
-            }
+        boolean isAdmin = currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isAdmin && !assignment.getMentor().getMentorId().equals(currentUser.getUserId())) {
+            throw new AccessDeniedException("Bạn không có quyền cập nhật trạng thái cho phân công này!");
         }
 
-        // 4. Cập nhật trạng thái mới
-        log.info("Cập nhật trạng thái phân công {} từ {} sang {}",
-                assignmentId, assignment.getStatus(), dto.getStatus());
-
         assignment.setStatus(dto.getStatus());
-        InternshipAssignment updated = assignmentRepository.save(assignment);
+        return ApiResponse.success(convertToResponse(assignmentRepository.save(assignment)), "Cập nhật trạng thái thành công");
+    }
 
-        // 5. Trả về kết quả qua ModelMapper
-        AssignmentResponse response = modelMapper.map(updated, AssignmentResponse.class);
+    @Override
+    @Transactional
+    public ApiResponse<?> delete(Long phaseId) {
+        log.info("Admin đang yêu cầu xóa giai đoạn thực tập ID: {}", phaseId);
 
-        // Gán thủ công các thông tin định danh
-        response.setStudentName(updated.getStudent().getUser().getFullName());
-        response.setMentorName(updated.getMentor().getUser().getFullName());
-        response.setPhaseName(updated.getInternshipPhase().getPhaseName());
-        response.setStatus(updated.getStatus().name());
+        InternshipPhase phase = phaseRepository.findById(phaseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giai đoạn thực tập ID: " + phaseId));
 
-        return ApiResponse.success(response, "Cập nhật trạng thái thành công");
+        boolean hasAssignments = assignmentRepository.existsByInternshipPhase_PhaseId(phaseId);
+
+        if (hasAssignments) {
+            phase.setActive(false);
+            phaseRepository.save(phase);
+            return ApiResponse.success(null, "Giai đoạn đã có dữ liệu phân công nên hệ thống đã chuyển sang trạng thái Ngưng hoạt động.");
+        }
+
+        phaseRepository.delete(phase);
+        return ApiResponse.success(null, "Xóa giai đoạn thực tập thành công");
     }
 }

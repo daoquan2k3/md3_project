@@ -20,7 +20,7 @@ import java.util.List;
 public class MentorController {
     private final IMentorService mentorService;
 
-    @GetMapping
+    @GetMapping//lấy danh sách giảng viên-tất cả giảng viên phụ trách của 1 học sinh
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_STUDENT')")
     public ResponseEntity<ApiResponse<List<MentorResponse>>> getAllMentors() {
         return ResponseEntity.ok(mentorService.getAllMentorsByRole());

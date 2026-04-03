@@ -9,6 +9,8 @@ import lombok.Setter;
 @Getter
 @Setter
 public class CreateMentorRequest {
+    @NotBlank(message = "Username không được để trống")
+    private String username;
     @NotBlank(message = "Email không được để trống")
     @Email(message = "Email không đúng định dạng")
     private String email;
@@ -20,9 +22,9 @@ public class CreateMentorRequest {
     private String fullName;
 
     @Pattern(regexp = "^(0|84)(3|5|7|8|9)([0-9]{8})$")
-    private String phone;
+    private String phoneNumber;
 
-    @NotBlank(message = "Khoa/Bộ môn không được để trống")
+    @NotBlank(message = "Tên môn không được để trống")
     private String department;
 
     private String academicRank;

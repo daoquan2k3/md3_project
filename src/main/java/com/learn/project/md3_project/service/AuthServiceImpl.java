@@ -4,12 +4,12 @@ import com.learn.project.md3_project.dto.request.LoginRequest;
 import com.learn.project.md3_project.dto.request.RegisterRequest;
 import com.learn.project.md3_project.dto.response.ApiResponse;
 import com.learn.project.md3_project.dto.response.JwtResponse;
-import com.learn.project.md3_project.entity.Role;
-import com.learn.project.md3_project.entity.RoleName;
-import com.learn.project.md3_project.entity.User;
+import com.learn.project.md3_project.entity.*;
 import com.learn.project.md3_project.exception.DataExistException;
 import com.learn.project.md3_project.exception.ResourceNotFoundException;
+import com.learn.project.md3_project.repository.IMentorRepository;
 import com.learn.project.md3_project.repository.IRoleRepository;
+import com.learn.project.md3_project.repository.IStudentRepository;
 import com.learn.project.md3_project.repository.IUserRepository;
 import com.learn.project.md3_project.security.jwt.JwtProvider;
 import com.learn.project.md3_project.security.principle.UserDetailCustom;
@@ -37,6 +37,8 @@ import java.util.stream.Collectors;
 public class AuthServiceImpl implements IAuthService {
     private final IRoleRepository iRoleRepository;
     private final IUserRepository iUserRepository;
+    private final IStudentRepository iStudentRepository;
+    private final IMentorRepository  iMentorRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final AuthenticationManager authenticationManager;
@@ -55,9 +57,34 @@ public class AuthServiceImpl implements IAuthService {
         try {
             User user = modelMapper.map(dto, User.class);
             user.setPasswordHash(passwordEncoder.encode(dto.getPasswordHash()));
-            user.setRoles(mapRoles(dto.getRoles()));
-            iUserRepository.save(user);
-            log.info("Lưu người dùng mới vào database thành công");
+
+            Set<Role> roles = mapRoles(dto.getRoles());
+            user.setRoles(roles);
+            user.setIsActive(true);
+            user.setIsDeleted(false);
+
+            User savedUser = iUserRepository.save(user);
+            log.info("Lưu User thành công với ID: {}", savedUser.getUserId());
+
+            Set<String> roleNames = roles.stream()
+                    .map(r -> r.getRoleName().name())
+                    .collect(Collectors.toSet());
+
+            if (roleNames.contains("ROLE_STUDENT")) {
+                Student student = Student.builder()
+                        .user(savedUser)
+                        .build();
+                iStudentRepository.save(student);
+                log.info("Đã tạo bản ghi Student cho User ID: {}", savedUser.getUserId());
+            }
+
+            if (roleNames.contains("ROLE_MENTOR")) {
+                Mentor mentor = Mentor.builder()
+                        .user(savedUser)
+                        .build();
+                iMentorRepository.save(mentor);
+                log.info("Đã tạo bản ghi Mentor cho User ID: {}", savedUser.getUserId());
+            }
         } catch (Exception e) {
             log.error("Lỗi hệ thống khi lưu User: {}", e.getMessage());
             throw e;

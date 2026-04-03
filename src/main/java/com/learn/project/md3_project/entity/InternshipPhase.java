@@ -34,6 +34,9 @@ public class InternshipPhase {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "is_active")
+    private boolean isActive;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

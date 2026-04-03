@@ -15,4 +15,6 @@ public interface IInternshipAssignmentService {
     ApiResponse<AssignmentResponse> getAssignmentDetail(Long assignmentId);
 
     ApiResponse<AssignmentResponse> updateAssignmentStatus(Long assignmentId, AsignStatusUpdateRequest dto);
+
+    ApiResponse<?> delete(Long assignmentId);
 }

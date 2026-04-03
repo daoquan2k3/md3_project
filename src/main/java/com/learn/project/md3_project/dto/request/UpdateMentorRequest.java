@@ -6,8 +6,9 @@ import lombok.Setter;
 @Getter
 @Setter
 public class UpdateMentorRequest {
+
     private String fullName;
-    private String phone;
+    private String phoneNumber;
 
     // Thông tin bảng Mentors
     private String department;
