@@ -10,10 +10,6 @@ import java.util.List;
 
 @Repository
 public interface IAssessmentResultRepository extends JpaRepository<AssessmentResult, Long> {
-//    boolean existsByAssessmentRound_RoundId(Long roundId);
-//    List<AssessmentResult> findByInternshipAssignment_AssignmentId(Long assignmentId);
-//    List<AssessmentResult> findByEvaluatedBy_UserId(Long userId);
-//    List<AssessmentResult> findByInternshipAssignment_Student_StudentId(Long studentId);
 
     //kiểm tra tồn tại
     @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END " +
