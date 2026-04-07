@@ -10,7 +10,7 @@ import java.util.List;
 
 @Repository
 public interface IAssessmentResultRepository extends JpaRepository<AssessmentResult, Long> {
-
+//
     //kiểm tra tồn tại
     @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END " +
             "FROM AssessmentResult r WHERE r.assessmentRound.roundId = :roundId")
