@@ -32,21 +32,22 @@ public class AssessmentResultServiceImpl implements IAssessmentResultService {
         UserDetailCustom currentUser = (UserDetailCustom) SecurityContextHolder.getContext()
                 .getAuthentication().getPrincipal();
 
-        List<AssessmentResult> results;
+        boolean isAdmin = currentUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isMentor = currentUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_MENTOR"));
 
-        if (currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
-            // Admin xem được tất cả hoặc lọc theo assignmentId
-            results = (assignmentId != null) ? resultRepository.findByAssignmentId(assignmentId) : resultRepository.findAll();
-        } else if (currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MENTOR"))) {
-            // Mentor chỉ xem được kết quả do mình chấm
-            results = resultRepository.findByEvaluatorId(currentUser.getUserId());
-        } else {
-            // Student chỉ xem được kết quả của chính mình
-            results = resultRepository.findByStudentId(currentUser.getUserId());
-        }
+        List<AssessmentResult> results = resultRepository.findAllByRoleAndId(
+                assignmentId,
+                currentUser.getUserId(),
+                isAdmin,
+                isMentor
+        );
 
         List<AssessmentResultResponse> responses = results.stream()
-                .map(this::mapToResponse).collect(Collectors.toList());
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+
         return ApiResponse.success(responses, "Lấy danh sách kết quả thành công");
     }
 

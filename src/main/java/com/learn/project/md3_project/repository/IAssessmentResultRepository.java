@@ -10,35 +10,30 @@ import java.util.List;
 
 @Repository
 public interface IAssessmentResultRepository extends JpaRepository<AssessmentResult, Long> {
-//    boolean existsByAssessmentRound_RoundId(Long roundId);
-//    List<AssessmentResult> findByInternshipAssignment_AssignmentId(Long assignmentId);
-//    List<AssessmentResult> findByEvaluatedBy_UserId(Long userId);
-//    List<AssessmentResult> findByInternshipAssignment_Student_StudentId(Long studentId);
-
+//
     //kiểm tra tồn tại
     @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END " +
             "FROM AssessmentResult r WHERE r.assessmentRound.roundId = :roundId")
     boolean existsByRoundId(@Param("roundId") Long roundId);
 
-    //tìm theo mã phân công
     @Query("SELECT r FROM AssessmentResult r " +
             "JOIN FETCH r.evaluationCriteria " +
             "JOIN FETCH r.assessmentRound " +
-            "WHERE r.internshipAssignment.assignmentId = :assignmentId")
-    List<AssessmentResult> findByAssignmentId(@Param("assignmentId") Long assignmentId);
-
-    //lấy danh sách chấm điểm theo id
-    @Query("SELECT r FROM AssessmentResult r " +
             "JOIN FETCH r.internshipAssignment a " +
             "JOIN FETCH a.student s " +
-            "WHERE r.evaluatedBy.userId = :userId")
-    List<AssessmentResult> findByEvaluatorId(@Param("userId") Long userId);
-
-    //lấy toàn danh sách điểm của sinh viên
-    @Query("SELECT r FROM AssessmentResult r " +
-            "JOIN FETCH r.evaluationCriteria " +
-            "JOIN FETCH r.assessmentRound " +
-            "WHERE r.internshipAssignment.student.studentId = :studentId " +
-            "ORDER BY r.assessmentRound.roundId ASC")
-    List<AssessmentResult> findByStudentId(@Param("studentId") Long studentId);
+            "WHERE " +
+            //Admin: Xem tất cả hoặc theo assignmentId
+            "(:isAdmin = true AND (:assignmentId IS NULL OR a.assignmentId = :assignmentId)) " +
+            "OR " +
+            //Mentor: Chỉ xem kết quả do mình chấm (:userId là ID của Mentor)
+            "(:isMentor = true AND r.evaluatedBy.userId = :userId AND (:assignmentId IS NULL OR a.assignmentId = :assignmentId)) " +
+            "OR " +
+            //Student: Chỉ xem kết quả của chính mình (:userId là ID của Student)
+            "(:isAdmin = false AND :isMentor = false AND s.studentId = :userId)")
+    List<AssessmentResult> findAllByRoleAndId(
+            @Param("assignmentId") Long assignmentId,
+            @Param("userId") Long userId,
+            @Param("isAdmin") boolean isAdmin,
+            @Param("isMentor") boolean isMentor
+    );
 }
