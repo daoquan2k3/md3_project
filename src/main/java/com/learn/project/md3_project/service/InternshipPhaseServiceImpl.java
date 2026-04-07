@@ -46,7 +46,7 @@ public class InternshipPhaseServiceImpl implements IInternshipPhaseService {
 
         InternshipPhaseResponse response = modelMapper.map(phase, InternshipPhaseResponse.class);
 
-        List<AssessmentRound> rounds = roundRepository.findByInternshipPhase_PhaseId(phaseId);
+        List<AssessmentRound> rounds = roundRepository.findByInternshipPhaseId(phaseId);
 
         List<AssessmentRoundResponse> roundDtos = rounds.stream()
                 .map(round -> modelMapper.map(round, AssessmentRoundResponse.class))
@@ -109,8 +109,7 @@ public class InternshipPhaseServiceImpl implements IInternshipPhaseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giai đoạn ID: " + phaseId));
 
         // KIỂM TRA RÀNG BUỘC: Nếu đã có sinh viên được phân công vào Phase này thì không cho xóa
-        // Giả sử bạn có IInternshipAssignmentRepository
-        boolean hasAssignments = assignmentRepository.existsByInternshipPhase_PhaseId(phaseId);
+        boolean hasAssignments = assignmentRepository.existsByInternshipPhaseId(phaseId);
 
         if (hasAssignments) {
             throw new RuntimeException("Không thể xóa giai đoạn này vì đã có dữ liệu phân công thực tập!");

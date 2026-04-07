@@ -1,6 +1,7 @@
 package com.learn.project.md3_project.controller;
 
-import com.learn.project.md3_project.dto.request.EvaluationCriteriaRequest;
+import com.learn.project.md3_project.dto.request.CreateEvaluationCriteriaRequest;
+import com.learn.project.md3_project.dto.request.UpdateCriteriaRequest;
 import com.learn.project.md3_project.dto.response.ApiResponse;
 import com.learn.project.md3_project.dto.response.EvaluationCriteriaResponse;
 import com.learn.project.md3_project.service.impl.IEvaluationCriteriaService;
@@ -34,13 +35,13 @@ public class EvaluationCriteriaController {
 
     @PostMapping
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<ApiResponse<EvaluationCriteriaResponse>> create(@Valid @RequestBody EvaluationCriteriaRequest dto) {
+    public ResponseEntity<ApiResponse<EvaluationCriteriaResponse>> create(@Valid @RequestBody CreateEvaluationCriteriaRequest dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(criteriaService.createCriteria(dto));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<ApiResponse<EvaluationCriteriaResponse>> update(@PathVariable Long id, @Valid @RequestBody EvaluationCriteriaRequest dto) {
+    public ResponseEntity<ApiResponse<EvaluationCriteriaResponse>> update(@PathVariable Long id, @Valid @RequestBody UpdateCriteriaRequest dto) {
         return ResponseEntity.ok(criteriaService.updateCriteria(id, dto));
     }
 

@@ -1,7 +1,7 @@
 package com.learn.project.md3_project.controller;
 
-import com.learn.project.md3_project.dto.request.AsignStatusUpdateRequest;
-import com.learn.project.md3_project.dto.request.AssignmentRequest;
+import com.learn.project.md3_project.dto.request.UpdateInternshipAsStatusRequest;
+import com.learn.project.md3_project.dto.request.CreateInternshipAssignmentRequest;
 import com.learn.project.md3_project.dto.response.ApiResponse;
 import com.learn.project.md3_project.dto.response.AssignmentResponse;
 import com.learn.project.md3_project.service.impl.IInternshipAssignmentService;
@@ -22,7 +22,7 @@ public class InternshipAssignmentController {
 
     @PostMapping
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<ApiResponse<AssignmentResponse>> create(@Valid @RequestBody AssignmentRequest dto) {
+    public ResponseEntity<ApiResponse<AssignmentResponse>> create(@Valid @RequestBody CreateInternshipAssignmentRequest dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(assignmentService.createAssignment(dto));
     }
 
@@ -43,7 +43,7 @@ public class InternshipAssignmentController {
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MENTOR')")
     public ResponseEntity<ApiResponse<AssignmentResponse>> updateStatus(
             @PathVariable Long id,
-            @Valid @RequestBody AsignStatusUpdateRequest dto) {
+            @Valid @RequestBody UpdateInternshipAsStatusRequest dto) {
 
         return ResponseEntity.ok(assignmentService.updateAssignmentStatus(id, dto));
     }

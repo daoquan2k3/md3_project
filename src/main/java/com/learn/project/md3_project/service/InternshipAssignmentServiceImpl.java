@@ -1,7 +1,7 @@
 package com.learn.project.md3_project.service;
 
-import com.learn.project.md3_project.dto.request.AsignStatusUpdateRequest;
-import com.learn.project.md3_project.dto.request.AssignmentRequest;
+import com.learn.project.md3_project.dto.request.UpdateInternshipAsStatusRequest;
+import com.learn.project.md3_project.dto.request.CreateInternshipAssignmentRequest;
 import com.learn.project.md3_project.dto.response.ApiResponse;
 import com.learn.project.md3_project.dto.response.AssignmentResponse;
 import com.learn.project.md3_project.entity.InternshipAssignment;
@@ -23,7 +23,6 @@ import org.modelmapper.ModelMapper;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -63,7 +62,7 @@ public class InternshipAssignmentServiceImpl implements IInternshipAssignmentSer
 
     @Override
     @Transactional
-    public ApiResponse<AssignmentResponse> createAssignment(AssignmentRequest dto) {
+    public ApiResponse<AssignmentResponse> createAssignment(CreateInternshipAssignmentRequest dto) {
         Student student = studentRepository.findById(dto.getStudentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sinh viên"));
         Mentor mentor = mentorRepository.findById(dto.getMentorId())
@@ -71,7 +70,7 @@ public class InternshipAssignmentServiceImpl implements IInternshipAssignmentSer
         InternshipPhase phase = phaseRepository.findById(dto.getPhaseId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giai đoạn"));
 
-        if (assignmentRepository.existsByStudent_StudentIdAndInternshipPhase_PhaseId(dto.getStudentId(), dto.getPhaseId())) {
+        if (assignmentRepository.isMentorAssignedToStudent(dto.getStudentId(), dto.getPhaseId())) {
             throw new RuntimeException("Sinh viên đã có phân công trong giai đoạn này!");
         }
 
@@ -98,9 +97,9 @@ public class InternshipAssignmentServiceImpl implements IInternshipAssignmentSer
         if (isAdmin) {
             assignments = assignmentRepository.findAll();
         } else if (isMentor) {
-            assignments = assignmentRepository.findByMentor_MentorId(userId);
+            assignments = assignmentRepository.findByMentorId(userId);
         } else if (isStudent) {
-            assignments = assignmentRepository.findByStudent_StudentId(userId);
+            assignments = assignmentRepository.findByStudentId(userId);
         } else {
             throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu này");
         }
@@ -131,7 +130,7 @@ public class InternshipAssignmentServiceImpl implements IInternshipAssignmentSer
 
     @Override
     @Transactional
-    public ApiResponse<AssignmentResponse> updateAssignmentStatus(Long assignmentId, AsignStatusUpdateRequest dto) {
+    public ApiResponse<AssignmentResponse> updateAssignmentStatus(Long assignmentId, UpdateInternshipAsStatusRequest dto) {
         UserDetailCustom currentUser = getCurrentUser();
         InternshipAssignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phân công ID: " + assignmentId));
@@ -148,13 +147,13 @@ public class InternshipAssignmentServiceImpl implements IInternshipAssignmentSer
 
     @Override
     @Transactional
-    public ApiResponse<?> delete(Long phaseId) {
+    public ApiResponse<Void> delete(Long phaseId) {
         log.info("Admin đang yêu cầu xóa giai đoạn thực tập ID: {}", phaseId);
 
         InternshipPhase phase = phaseRepository.findById(phaseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giai đoạn thực tập ID: " + phaseId));
 
-        boolean hasAssignments = assignmentRepository.existsByInternshipPhase_PhaseId(phaseId);
+        boolean hasAssignments = assignmentRepository.existsByInternshipPhaseId(phaseId);
 
         if (hasAssignments) {
             phase.setActive(false);

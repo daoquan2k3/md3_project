@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class AssignmentRequest {
+public class CreateInternshipAssignmentRequest {
     @NotNull(message = "ID sinh viên không được để trống")
     private Long studentId;
 

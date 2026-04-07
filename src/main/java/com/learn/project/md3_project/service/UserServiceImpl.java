@@ -95,32 +95,27 @@ public class UserServiceImpl implements IUserService {
 
     @Override
     public ApiResponse<List<UserResponse>> getAllUserByRoles(Set<String> roleNames) {
-        log.info("Bắt đầu lấy danh sách User theo roles: {}", roleNames);
+        log.info("Yêu cầu lấy danh sách người dùng với lọc roles: {}", roleNames);
 
-        Set<RoleName> enumRoles = roleNames.stream()
-                .map(name -> {
-                    String formatted = name.startsWith("ROLE_") ? name.toUpperCase() : "ROLE_" + name.toUpperCase();
-                    return RoleName.valueOf(formatted);
-                })
-                .collect(Collectors.toSet());
-
-        List<User> users = iUserRepository.findDistinctByRoles_RoleNameIn(enumRoles);
-
+        //Lấy dữ liệu từ Repo: Nếu roleNames rỗng thì lấy findAll, ngược lại lấy theo Roles
+        List<User> users = (roleNames == null || roleNames.isEmpty())
+                ? iUserRepository.findAll()
+                : iUserRepository.findUserByRoles(roleNames.stream()
+                .map(name -> RoleName.valueOf(name.startsWith("ROLE_") ? name.toUpperCase() : "ROLE_" + name.toUpperCase()))
+                .collect(Collectors.toSet()));
+        //Ánh xạ danh sách Entity -> DTO Response
         List<UserResponse> responses = users.stream()
                 .map(user -> {
                     UserResponse dto = modelMapper.map(user, UserResponse.class);
-
                     dto.setRoles(user.getRoles().stream()
                             .map(role -> role.getRoleName().name())
                             .collect(Collectors.toSet()));
-
-                    dto.setPhoneNumber(user.getPhoneNumber());
 
                     return dto;
                 })
                 .collect(Collectors.toList());
 
-        return ApiResponse.success(responses, "Lấy danh sách người dùng theo quyền thành công");
+        return ApiResponse.success(responses, "Lấy danh sách người dùng thành công");
     }
 
     @Override

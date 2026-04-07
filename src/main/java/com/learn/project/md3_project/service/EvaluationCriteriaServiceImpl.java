@@ -1,9 +1,12 @@
 package com.learn.project.md3_project.service;
 
-import com.learn.project.md3_project.dto.request.EvaluationCriteriaRequest;
+import com.learn.project.md3_project.dto.request.CreateEvaluationCriteriaRequest;
+import com.learn.project.md3_project.dto.request.UpdateCriteriaRequest;
 import com.learn.project.md3_project.dto.response.ApiResponse;
 import com.learn.project.md3_project.dto.response.EvaluationCriteriaResponse;
 import com.learn.project.md3_project.entity.EvaluationCriteria;
+import com.learn.project.md3_project.exception.AccessDeniedException;
+import com.learn.project.md3_project.exception.DataExistException;
 import com.learn.project.md3_project.exception.ResourceNotFoundException;
 import com.learn.project.md3_project.repository.IEvaluationCriteriaRepository;
 import com.learn.project.md3_project.repository.IRoundCriteriaRepository;
@@ -41,9 +44,9 @@ public class EvaluationCriteriaServiceImpl implements IEvaluationCriteriaService
     }
 
     @Override
-    public ApiResponse<EvaluationCriteriaResponse> createCriteria(EvaluationCriteriaRequest dto) {
+    public ApiResponse<EvaluationCriteriaResponse> createCriteria(CreateEvaluationCriteriaRequest dto) {
         if (criteriaRepository.existsByCriterionName(dto.getCriterionName())) {
-            throw new RuntimeException("Tên tiêu chí này đã tồn tại!");
+            throw new DataExistException("Tên tiêu chí này đã tồn tại!");
         }
         EvaluationCriteria criteria = modelMapper.map(dto, EvaluationCriteria.class);
         EvaluationCriteria saved = criteriaRepository.save(criteria);
@@ -51,13 +54,19 @@ public class EvaluationCriteriaServiceImpl implements IEvaluationCriteriaService
     }
 
     @Override
-    public ApiResponse<EvaluationCriteriaResponse> updateCriteria(Long id, EvaluationCriteriaRequest dto) {
+    public ApiResponse<EvaluationCriteriaResponse> updateCriteria(Long id, UpdateCriteriaRequest dto) {
         EvaluationCriteria criteria = criteriaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tiêu chí ID: " + id));
 
-        criteria.setCriterionName(dto.getCriterionName());
-        criteria.setDescription(dto.getDescription());
-        criteria.setMaxScore(dto.getMaxScore());
+        if(dto.getCriterionName() != null) {
+            criteria.setCriterionName(dto.getCriterionName());
+        }
+        if(dto.getDescription() != null) {
+            criteria.setDescription(dto.getDescription());
+        }
+        if(dto.getMaxScore()!= null) {
+            criteria.setMaxScore(dto.getMaxScore());
+        }
 
         EvaluationCriteria updated = criteriaRepository.save(criteria);
         return ApiResponse.success(modelMapper.map(updated, EvaluationCriteriaResponse.class), "Cập nhật thành công");
@@ -68,9 +77,9 @@ public class EvaluationCriteriaServiceImpl implements IEvaluationCriteriaService
         EvaluationCriteria criteria = criteriaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tiêu chí ID: " + id));
 
-        boolean isUsed = roundCriteriaRepository.existsByEvaluationCriteria_CriterionId(id);
+        boolean isUsed = roundCriteriaRepository.existsByCriterionId(id);
         if (isUsed) {
-            throw new RuntimeException("Không thể xóa tiêu chí này vì nó đang được sử dụng trong các vòng đánh giá!");
+            throw new AccessDeniedException("Không thể xóa tiêu chí này vì nó đang được sử dụng trong các vòng đánh giá!");
         }
 
         criteriaRepository.delete(criteria);

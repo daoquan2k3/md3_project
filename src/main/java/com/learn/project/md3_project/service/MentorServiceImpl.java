@@ -83,10 +83,8 @@ public class MentorServiceImpl implements IMentorService {
         boolean isStudent = currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_STUDENT"));
 
         List<Mentor> mentors;
-        if (isAdmin) {
+        if (isAdmin || isStudent) {
             mentors = mentorRepository.findAll();
-        } else if (isStudent) {
-            mentors = mentorRepository.findMentorsByStudentId(currentUser.getUserId());
         } else {
             throw new AccessDeniedException("Bạn không có quyền truy cập danh sách này!");
         }
@@ -110,7 +108,7 @@ public class MentorServiceImpl implements IMentorService {
         // Kiểm tra quyền xem
         if (!isAdmin && !mentorId.equals(currentUser.getUserId())) {
             if (isStudent) {
-                boolean isAssigned = assignmentRepository.existsByStudent_StudentIdAndMentor_MentorId(currentUser.getUserId(), mentorId);
+                boolean isAssigned = assignmentRepository.isMentorAssignedToStudent(currentUser.getUserId(), mentorId);
                 if (!isAssigned) throw new AccessDeniedException("Giảng viên này không hướng dẫn bạn!");
             } else {
                 throw new AccessDeniedException("Truy cập bị từ chối!");
@@ -127,24 +125,18 @@ public class MentorServiceImpl implements IMentorService {
         Role mentorRole = roleRepository.findByRoleName(RoleName.ROLE_MENTOR)
                 .orElseThrow(() -> new ResourceNotFoundException("Role ROLE_MENTOR không tồn tại!"));
 
-        User user = User.builder()
-                .email(dto.getEmail())
-                .username(dto.getUsername())
-                .passwordHash(passwordEncoder.encode(dto.getPasswordHash()))
-                .fullName(dto.getFullName())
-                .phoneNumber(dto.getPhoneNumber())
-                .roles(Set.of(mentorRole))
-                .isActive(true)
-                .build();
-
+        User user = modelMapper.map(dto, User.class);
+        user.setPasswordHash(passwordEncoder.encode(dto.getPasswordHash()));
+        user.setRoles(Set.of(mentorRole));
+        user.setIsActive(true);
+        user.setIsDeleted(false);
         User savedUser = userRepository.save(user);
-        Mentor mentor = Mentor.builder()
-                .user(savedUser)
-                .department(dto.getDepartment())
-                .academicRank(dto.getAcademicRank())
-                .build();
 
-        return ApiResponse.success(convertToResponse(mentorRepository.save(mentor), true), "Tạo giảng viên thành công");
+        Mentor mentor = modelMapper.map(dto, Mentor.class);
+        mentor.setUser(savedUser);
+        Mentor savedMentor = mentorRepository.save(mentor);
+
+        return ApiResponse.success(convertToResponse(savedMentor, true), "Tạo giảng viên thành công");
     }
 
     @Override

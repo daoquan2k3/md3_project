@@ -7,6 +7,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "assessment_rounds")
@@ -49,4 +50,7 @@ public class AssessmentRound {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "assessmentRound", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RoundCriteria> roundCriteria;
 }

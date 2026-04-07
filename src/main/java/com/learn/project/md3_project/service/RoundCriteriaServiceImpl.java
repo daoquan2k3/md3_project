@@ -1,18 +1,19 @@
 package com.learn.project.md3_project.service;
 
-import com.learn.project.md3_project.dto.request.RoundCriterionRequest;
+import com.learn.project.md3_project.dto.request.CreateRoundCriterionRequest;
+import com.learn.project.md3_project.dto.request.UpdateRoundCriterionRequest;
 import com.learn.project.md3_project.dto.response.ApiResponse;
 import com.learn.project.md3_project.dto.response.RoundCriteriaResponse;
 import com.learn.project.md3_project.entity.AssessmentRound;
 import com.learn.project.md3_project.entity.EvaluationCriteria;
 import com.learn.project.md3_project.entity.RoundCriteria;
+import com.learn.project.md3_project.exception.ResourceNotFoundException;
 import com.learn.project.md3_project.repository.IAssessmentRoundRepository;
 import com.learn.project.md3_project.repository.IEvaluationCriteriaRepository;
 import com.learn.project.md3_project.repository.IRoundCriteriaRepository;
 import com.learn.project.md3_project.service.impl.IRoundCriteriaService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,13 +25,12 @@ public class RoundCriteriaServiceImpl implements IRoundCriteriaService {
     private final IRoundCriteriaRepository roundCriteriaRepository;
     private final IAssessmentRoundRepository roundRepository;
     private final IEvaluationCriteriaRepository criteriaRepository;
-    private final ModelMapper modelMapper;
 
     @Override
     public ApiResponse<List<RoundCriteriaResponse>> getAll(Long roundId) {
         List<RoundCriteria> list;
         if (roundId != null) {
-            list = roundCriteriaRepository.findByAssessmentRound_RoundId(roundId);
+            list = roundCriteriaRepository.findByRoundId(roundId);
         } else {
             list = roundCriteriaRepository.findAll();
         }
@@ -50,16 +50,16 @@ public class RoundCriteriaServiceImpl implements IRoundCriteriaService {
 
     @Override
     @Transactional
-    public ApiResponse<RoundCriteriaResponse> create(RoundCriterionRequest dto) {
+    public ApiResponse<RoundCriteriaResponse> create(CreateRoundCriterionRequest dto) {
         // Kiểm tra trùng lặp
-        if (roundCriteriaRepository.existsByAssessmentRound_RoundIdAndEvaluationCriteria_CriterionId(dto.getRoundId(), dto.getCriterionId())) {
+        if (roundCriteriaRepository.existsByRoundAndCriteria(dto.getRoundId(), dto.getCriterionId())) {
             throw new RuntimeException("Tiêu chí này đã tồn tại trong vòng đánh giá!");
         }
 
         AssessmentRound round = roundRepository.findById(dto.getRoundId())
-                .orElseThrow(() -> new RuntimeException("Round không tồn tại"));
+                .orElseThrow(() -> new ResourceNotFoundException("Round không tồn tại"));
         EvaluationCriteria criteria = criteriaRepository.findById(dto.getCriterionId())
-                .orElseThrow(() -> new RuntimeException("Criterion không tồn tại"));
+                .orElseThrow(() -> new ResourceNotFoundException("Criterion không tồn tại"));
 
         RoundCriteria rc = RoundCriteria.builder()
                 .assessmentRound(round)
@@ -72,14 +72,11 @@ public class RoundCriteriaServiceImpl implements IRoundCriteriaService {
 
     @Override
     @Transactional
-    public ApiResponse<RoundCriteriaResponse> update(Long id, RoundCriterionRequest dto) {
+    public ApiResponse<RoundCriteriaResponse> update(Long id, UpdateRoundCriterionRequest dto) {
         RoundCriteria rc = roundCriteriaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy bản ghi ID: " + id));
 
         rc.setWeight(dto.getWeight());
-
-        // Lưu ý: Thường không nên cho phép đổi roundId/criterionId ở đây
-        // để tránh vi phạm logic chấm điểm đã có. Nếu muốn đổi thì nên xóa tạo mới.
 
         return ApiResponse.success(convertToResponse(roundCriteriaRepository.save(rc)), "Cập nhật trọng số thành công");
     }

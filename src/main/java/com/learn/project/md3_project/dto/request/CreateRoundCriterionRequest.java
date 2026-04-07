@@ -10,11 +10,10 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
-public class RoundCriterionRequest {
-    @NotNull(message = "Round ID không được để trống")
+public class CreateRoundCriterionRequest {
+    @NotNull(message = "Không được bỏ trống!")
     private Long roundId;
-
-    @NotNull(message = "Criterion ID không được để trống")
+    @NotNull(message = "Không được bỏ trống!")
     private Long criterionId;
 
     @NotNull(message = "Trọng số không được để trống")

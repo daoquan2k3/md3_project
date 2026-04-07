@@ -14,5 +14,5 @@ public class CreateAssessmentRoundRequest {
     private LocalDate startDate;
     private LocalDate endDate;
     private String description;
-    private List<RoundCriterionRequest> criteria;
+    private List<CreateRoundCriterionRequest> criteria;
 }
