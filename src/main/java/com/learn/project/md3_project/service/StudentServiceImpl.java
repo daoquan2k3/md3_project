@@ -21,6 +21,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -88,19 +89,19 @@ public class StudentServiceImpl implements IStudentService {
     }
 
     private void validateAccess(UserDetailCustom currentUser, Long targetStudentId) {
-        boolean isAdmin = currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        boolean isMentor = currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MENTOR"));
+        Set<String> roles = currentUser.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
 
-        if (isAdmin) return;
+        if (roles.contains("ROLE_ADMIN") || roles.contains("ROLE_MENTOR")) {
+            return;
+        }
 
-        if (isMentor) {
-            if (!assignmentRepository.existsByStudent_StudentIdAndMentor_MentorId(targetStudentId, currentUser.getUserId())) {
-                throw new AccessDeniedException("Sinh viên này không thuộc danh sách hướng dẫn của bạn!");
-            }
-        } else { // Là Student
-            if (!targetStudentId.equals(currentUser.getUserId())) {
-                throw new AccessDeniedException("Bạn không thể xem hồ sơ của người khác!");
-            }
+        log.info("Current Login User ID: {}", currentUser.getUserId());
+        log.info("Target Student ID: {}", targetStudentId);
+
+        if (!targetStudentId.equals(currentUser.getUserId())) {
+            throw new AccessDeniedException("Bạn không có quyền truy cập hồ sơ của người khác!");
         }
     }
 

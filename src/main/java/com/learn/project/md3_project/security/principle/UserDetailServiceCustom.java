@@ -23,6 +23,7 @@ public class UserDetailServiceCustom implements UserDetailsService {
                 role-> new SimpleGrantedAuthority(role.getRoleName().name())
         ).toList();
         return UserDetailCustom.builder()
+                .userId(user.getUserId())
                 .username(user.getEmail())
                 .password(user.getPasswordHash())
                 .authorities(list)

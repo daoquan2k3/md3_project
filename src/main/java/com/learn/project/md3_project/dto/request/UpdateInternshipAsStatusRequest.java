@@ -7,7 +7,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class AsignStatusUpdateRequest {
+public class UpdateInternshipAsStatusRequest {
     @NotNull(message = "Trạng thái không được để trống")
     private InternshipAssignment.AssignmentStatus status;
 }

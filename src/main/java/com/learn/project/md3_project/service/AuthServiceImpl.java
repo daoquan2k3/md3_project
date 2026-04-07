@@ -142,7 +142,7 @@ public class AuthServiceImpl implements IAuthService {
     @Override
     public JwtResponse loginStep2(String email, String otp) {
         if (!otpService.validateOtp(email, otp)) {
-            throw new RuntimeException("Mã OTP không chính xác hoặc đã hết hạn");
+            throw new RuntimeException("Mã OTP không chính xác hoặc nhập sai email!");
         }
 
         User user = iUserRepository.findByEmail(email)

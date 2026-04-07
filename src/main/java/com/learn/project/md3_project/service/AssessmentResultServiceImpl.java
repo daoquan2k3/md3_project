@@ -4,6 +4,8 @@ import com.learn.project.md3_project.dto.request.CreateAssessmentResultRequest;
 import com.learn.project.md3_project.dto.response.ApiResponse;
 import com.learn.project.md3_project.dto.response.AssessmentResultResponse;
 import com.learn.project.md3_project.entity.*;
+import com.learn.project.md3_project.exception.AccessDeniedException;
+import com.learn.project.md3_project.exception.ResourceNotFoundException;
 import com.learn.project.md3_project.repository.*;
 import com.learn.project.md3_project.security.principle.UserDetailCustom;
 import com.learn.project.md3_project.service.impl.IAssessmentResultService;
@@ -34,13 +36,13 @@ public class AssessmentResultServiceImpl implements IAssessmentResultService {
 
         if (currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
             // Admin xem được tất cả hoặc lọc theo assignmentId
-            results = (assignmentId != null) ? resultRepository.findByInternshipAssignment_AssignmentId(assignmentId) : resultRepository.findAll();
+            results = (assignmentId != null) ? resultRepository.findByAssignmentId(assignmentId) : resultRepository.findAll();
         } else if (currentUser.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MENTOR"))) {
             // Mentor chỉ xem được kết quả do mình chấm
-            results = resultRepository.findByEvaluatedBy_UserId(currentUser.getUserId());
+            results = resultRepository.findByEvaluatorId(currentUser.getUserId());
         } else {
             // Student chỉ xem được kết quả của chính mình
-            results = resultRepository.findByInternshipAssignment_Student_StudentId(currentUser.getUserId());
+            results = resultRepository.findByStudentId(currentUser.getUserId());
         }
 
         List<AssessmentResultResponse> responses = results.stream()
@@ -55,15 +57,15 @@ public class AssessmentResultServiceImpl implements IAssessmentResultService {
 
         // Kiểm tra phân công: Mentor này có hướng dẫn sinh viên này không?
         InternshipAssignment assignment = assignmentRepository.findById(dto.getAssignmentId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin phân công"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin phân công"));
 
         if (!assignment.getMentor().getMentorId().equals(currentUser.getUserId())) {
-            throw new RuntimeException("Bạn không có quyền chấm điểm cho sinh viên không thuộc danh sách hướng dẫn");
+            throw new AccessDeniedException("Bạn không có quyền chấm điểm cho sinh viên không thuộc danh sách hướng dẫn");
         }
 
         // Kiểm tra thời hạn vòng đánh giá
         AssessmentRound round = roundRepository.findById(dto.getRoundId())
-                .orElseThrow(() -> new RuntimeException("Vòng đánh giá không tồn tại"));
+                .orElseThrow(() -> new ResourceNotFoundException("Vòng đánh giá không tồn tại"));
         LocalDate now = LocalDate.now();
         if (now.isBefore(round.getStartDate()) || now.isAfter(round.getEndDate())) {
             throw new RuntimeException("Hiện tại không nằm trong thời gian cho phép chấm điểm của vòng này");
@@ -97,10 +99,10 @@ public class AssessmentResultServiceImpl implements IAssessmentResultService {
                 .getAuthentication().getPrincipal();
 
         AssessmentResult result = resultRepository.findById(resultId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy kết quả đánh giá"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kết quả đánh giá"));
 
         if (!result.getEvaluatedBy().getUserId().equals(currentUser.getUserId())) {
-            throw new RuntimeException("Bạn chỉ có quyền chỉnh sửa kết quả do chính mình tạo ra");
+            throw new AccessDeniedException("Bạn chỉ có quyền chỉnh sửa kết quả do chính mình tạo ra");
         }
 
         result.setScore(dto.getScore());

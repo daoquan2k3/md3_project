@@ -37,7 +37,7 @@ public class UserController {
     @GetMapping("/by-roles")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<List<UserResponse>>> getUsersByRoles(
-            @RequestBody Set<String> roleNames) {
+            @RequestParam Set<String> roleNames) {
         return ResponseEntity.ok(userService.getAllUserByRoles(roleNames));
     }
 
